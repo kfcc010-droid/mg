@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>업무 FAQ 검색</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --primary: #2563eb;
+      --primary-soft: #eff6ff;
+      --highlight: #fff2a8;
+    }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .container {
+      width: min(960px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 48px 0 64px;
+    }
+
+    .header {
+      margin-bottom: 24px;
+    }
+
+    .header h1 {
+      margin: 0 0 8px;
+      font-size: clamp(28px, 4vw, 40px);
+      letter-spacing: -0.04em;
+    }
+
+    .header p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .search-panel {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 8px 30px rgba(15, 23, 42, 0.05);
+    }
+
+    .search-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .search-input {
+      flex: 1;
+      height: 50px;
+      border: 1px solid #cfd5df;
+      border-radius: 12px;
+      padding: 0 16px;
+      font-size: 16px;
+      outline: none;
+      transition: .2s ease;
+    }
+
+    .search-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, .10);
+    }
+
+    .all-button {
+      min-width: 100px;
+      border: 0;
+      border-radius: 12px;
+      background: var(--primary);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 0 18px;
+    }
+
+    .category-label {
+      display: block;
+      margin-bottom: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #4b5563;
+    }
+
+    .category-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .category-button {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: #374151;
+      padding: 9px 14px;
+      border-radius: 999px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: .15s ease;
+    }
+
+    .category-button:hover {
+      border-color: #b8c4d6;
+      background: #f8fafc;
+    }
+
+    .category-button.active {
+      font-weight: 800;
+    }
+
+    .category-button[data-category="전체"].active { background: #eef2ff; border-color: #a5b4fc; color: #4338ca; }
+    .category-button[data-category="교육"].active { background: #ecfdf5; border-color: #86efac; color: #15803d; }
+    .category-button[data-category="문서"].active { background: #fff7ed; border-color: #fdba74; color: #c2410c; }
+    .category-button[data-category="IT"].active { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }
+    .category-button[data-category="보안"].active { background: #fdf2f8; border-color: #f9a8d4; color: #be185d; }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin: 28px 0 12px;
+    }
+
+    .result-header h2 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .result-count {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .faq-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .faq-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 20px;
+    }
+
+    .faq-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 12px;
+    }
+
+    .question {
+      margin: 0;
+      font-size: 17px;
+      line-height: 1.55;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .category-badge {
+      flex: 0 0 auto;
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-size: 12px;
+      font-weight: 800;
+      border: 1px solid transparent;
+    }
+
+    .category-badge.category-교육 { background: #ecfdf5; border-color: #bbf7d0; color: #15803d; }
+    .category-badge.category-문서 { background: #fff7ed; border-color: #fed7aa; color: #c2410c; }
+    .category-badge.category-IT { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+    .category-badge.category-보안 { background: #fdf2f8; border-color: #fbcfe8; color: #be185d; }
+
+    .faq-card.category-교육 { border-left: 5px solid #22c55e; }
+    .faq-card.category-문서 { border-left: 5px solid #f97316; }
+    .faq-card.category-IT { border-left: 5px solid #3b82f6; }
+    .faq-card.category-보안 { border-left: 5px solid #ec4899; }
+
+    .question-wrap {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .faq-number {
+      flex: 0 0 auto;
+      min-width: 34px;
+      height: 28px;
+      border-radius: 9px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #f3f4f6;
+      color: #374151;
+      font-size: 12px;
+      font-weight: 800;
+      margin-top: 1px;
+    }
+
+    .answer {
+      margin: 0;
+      color: #4b5563;
+      line-height: 1.7;
+    }
+
+    mark {
+      background: var(--highlight);
+      color: inherit;
+      padding: 0 2px;
+      border-radius: 3px;
+    }
+
+    .empty {
+      background: var(--card);
+      border: 1px dashed #cbd5e1;
+      border-radius: 16px;
+      padding: 42px 20px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    @media (max-width: 640px) {
+      .container { width: min(100% - 20px, 960px); padding-top: 28px; }
+      .search-row { flex-direction: column; }
+      .search-input, .all-button { width: 100%; height: 48px; }
+      .faq-top { flex-direction: column-reverse; }
+      .category-badge { align-self: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <section class="header">
+      <h1>업무 FAQ 검색</h1>
+      <p>질문이나 키워드를 입력해 필요한 업무 FAQ를 찾아보세요.</p>
+    </section>
+
+    <section class="search-panel" aria-label="FAQ 검색 및 분류">
+      <div class="search-row">
+        <input
+          id="searchInput"
+          class="search-input"
+          type="search"
+          placeholder="질문이나 키워드를 입력하세요."
+          autocomplete="off"
+          aria-label="질문이나 키워드 검색"
+        />
+        <button id="showAllButton" class="all-button" type="button">전체보기</button>
+      </div>
+
+      <span class="category-label">분류</span>
+      <div id="categoryButtons" class="category-buttons">
+        <button class="category-button active" type="button" data-category="전체">전체</button>
+        <button class="category-button" type="button" data-category="교육">교육</button>
+        <button class="category-button" type="button" data-category="문서">문서</button>
+        <button class="category-button" type="button" data-category="IT">IT</button>
+        <button class="category-button" type="button" data-category="보안">보안</button>
+      </div>
+    </section>
+
+    <section aria-live="polite">
+      <div class="result-header">
+        <h2>검색 결과</h2>
+        <div id="resultCount" class="result-count"></div>
+      </div>
+      <div id="faqList" class="faq-list"></div>
+    </section>
+  </main>
+
+  <script>
+    const faqData = [
+      { category: "교육", question: "교육 신청은 어디에서 하나요?", answer_seed: "교육 포털의 과정 검색 후 신청 메뉴를 사용합니다." },
+      { category: "교육", question: "신청한 교육을 취소하려면 어떻게 하나요?", answer_seed: "신청내역에서 취소 가능 여부를 확인합니다." },
+      { category: "교육", question: "교육 신청이 정상적으로 완료되었는지 어떻게 확인하나요?", answer_seed: "신청내역에서 신청 상태를 확인합니다." },
+      { category: "교육", question: "교육 신청 기간이 지나도 신청할 수 있나요?", answer_seed: "교육별 신청 기간과 추가 신청 가능 여부를 확인합니다." },
+      { category: "교육", question: "신청한 교육 일정을 변경할 수 있나요?", answer_seed: "신청내역에서 일정 변경 가능 여부를 확인합니다." },
+      { category: "교육", question: "교육 신청 후 교육생 정보를 수정할 수 있나요?", answer_seed: "신청내역에서 정보 수정 가능 여부를 확인합니다." },
+      { category: "교육", question: "교육 신청 인원이 마감된 경우 대기 신청이 가능한가요?", answer_seed: "해당 교육의 대기 신청 지원 여부를 확인합니다." },
+      { category: "교육", question: "교육 신청에 별도의 자격 조건이 있나요?", answer_seed: "교육 상세정보에서 신청 대상과 자격 조건을 확인합니다." },
+      { category: "교육", question: "여러 교육을 동시에 신청할 수 있나요?", answer_seed: "교육별 신청 조건과 일정 중복 여부를 확인합니다." },
+      { category: "교육", question: "취소한 교육을 다시 신청할 수 있나요?", answer_seed: "신청 기간과 잔여 인원을 확인한 후 재신청 가능 여부를 확인합니다." },
+      { category: "교육", question: "교육 신청 승인은 언제 확인할 수 있나요?", answer_seed: "신청내역에서 승인 상태를 확인합니다." },
+
+      { category: "문서", question: "주간 업무보고에는 무엇을 넣어야 하나요?", answer_seed: "주요 실적, 이슈, 다음 주 계획을 중심으로 작성합니다." },
+      { category: "문서", question: "회의 결과보고서는 어떻게 작성하나요?", answer_seed: "회의 개요, 주요 논의사항, 결정사항, 후속 조치사항을 중심으로 작성합니다." },
+      { category: "문서", question: "업무보고서 제목은 어떻게 작성하는 것이 좋나요?", answer_seed: "보고 목적과 주요 내용을 명확하게 파악할 수 있도록 간결하게 작성합니다." },
+      { category: "문서", question: "보고서에 표나 그래프를 사용해도 되나요?", answer_seed: "수치나 현황을 효과적으로 전달할 필요가 있는 경우 표나 그래프를 활용합니다." },
+      { category: "문서", question: "공문 작성 시 반드시 포함해야 하는 내용은 무엇인가요?", answer_seed: "문서 목적, 주요 내용, 요청사항 등 필요한 항목을 확인하여 작성합니다." },
+      { category: "문서", question: "보고서 내용을 간결하게 작성하려면 어떻게 해야 하나요?", answer_seed: "핵심 내용과 근거를 중심으로 정리하고 중복되거나 불필요한 표현을 줄입니다." },
+      { category: "문서", question: "기존 문서를 수정할 때 주의할 점은 무엇인가요?", answer_seed: "기존 내용의 사실관계와 변경 범위를 확인한 후 필요한 부분만 수정합니다." },
+      { category: "문서", question: "문서에 작성자를 알 수 없는 내용을 추가해도 되나요?", answer_seed: "출처와 사실관계를 확인할 수 없는 내용은 임의로 추가하지 않습니다." },
+      { category: "문서", question: "업무계획서는 어떤 순서로 작성하면 되나요?", answer_seed: "업무 목적, 주요 추진내용, 일정, 기대 결과 등을 순서에 맞게 정리합니다." },
+      { category: "문서", question: "문서 제출 전에 무엇을 확인해야 하나요?", answer_seed: "내용의 정확성, 오탈자, 형식, 첨부자료 및 제출 대상 등을 확인합니다." },
+
+      { category: "IT", question: "사내 시스템 접속이 되지 않습니다.", answer_seed: "네트워크, 브라우저, 계정 상태를 순서대로 확인합니다." },
+      { category: "IT", question: "로그인 시 비밀번호가 일치하지 않는다는 메시지가 표시됩니다.", answer_seed: "입력 정보를 다시 확인하고 비밀번호 재설정 가능 여부를 확인합니다." },
+      { category: "IT", question: "사내 시스템 화면이 정상적으로 표시되지 않습니다.", answer_seed: "브라우저 새로고침, 캐시 삭제, 지원 브라우저 사용 여부를 확인합니다." },
+      { category: "IT", question: "시스템 사용 중 오류 메시지가 발생합니다.", answer_seed: "오류 메시지와 발생 시점을 확인한 후 동일한 문제가 반복되는지 확인합니다." },
+      { category: "IT", question: "특정 메뉴에 접근할 수 없습니다.", answer_seed: "해당 메뉴의 사용 권한과 계정 상태를 확인합니다." },
+      { category: "IT", question: "시스템에서 파일 업로드가 되지 않습니다.", answer_seed: "파일 형식, 파일 크기, 네트워크 연결 상태를 확인합니다." },
+      { category: "IT", question: "시스템에서 파일 다운로드가 되지 않습니다.", answer_seed: "브라우저의 다운로드 설정과 보안 설정을 확인합니다." },
+      { category: "IT", question: "시스템 이용 중 화면이 멈추거나 응답하지 않습니다.", answer_seed: "네트워크 상태를 확인하고 브라우저를 다시 실행한 후 재접속합니다." },
+      { category: "IT", question: "계정이 잠겨 시스템에 로그인할 수 없습니다.", answer_seed: "계정 잠금 상태를 확인하고 계정 복구 또는 잠금 해제 절차를 확인합니다." },
+      { category: "IT", question: "시스템에서 입력하거나 수정한 내용이 저장되지 않습니다.", answer_seed: "필수 입력 항목과 저장 권한을 확인하고 오류 메시지 발생 여부를 확인합니다." },
+
+      { category: "보안", question: "ChatGPT에 내부 업무자료를 넣어도 되나요?", answer_seed: "교육에서는 합성자료를 사용하고, 실제 자료는 조직의 보안 및 AI 사용 기준을 먼저 확인합니다." },
+      { category: "보안", question: "AI에 개인정보가 포함된 문서를 입력해도 되나요?", answer_seed: "개인정보 입력은 최소화하고, 필요한 경우 비식별화한 후 조직의 개인정보 및 AI 사용 기준을 확인합니다." },
+      { category: "보안", question: "AI에 고객이나 거래처 정보를 입력해도 되나요?", answer_seed: "고객 및 거래처 정보는 임의로 입력하지 않고 조직의 정보보호 및 AI 사용 기준을 먼저 확인합니다." },
+      { category: "보안", question: "AI를 이용해 사내 문서를 요약해도 되나요?", answer_seed: "문서의 보안등급과 포함된 정보를 확인하고 조직에서 허용한 AI 서비스와 이용 기준을 따릅니다." },
+      { category: "보안", question: "AI에 계정이나 비밀번호 정보를 입력해도 되나요?", answer_seed: "아이디, 비밀번호, 인증번호 등 인증정보는 AI에 입력하지 않습니다." },
+      { category: "보안", question: "생성형 AI에 소스코드를 입력해도 되나요?", answer_seed: "내부 소스코드나 비공개 기술정보는 임의로 입력하지 않고 조직의 보안 및 개발 기준을 확인합니다." },
+      { category: "보안", question: "무료 AI 서비스를 업무에 사용해도 되나요?", answer_seed: "서비스의 데이터 처리 방식과 조직의 AI 사용 정책을 확인하고 허용된 서비스인지 먼저 확인합니다." },
+      { category: "보안", question: "AI가 만든 답변을 그대로 업무에 사용해도 되나요?", answer_seed: "AI의 답변에는 오류나 부정확한 내용이 포함될 수 있으므로 사실관계와 근거를 확인한 후 사용합니다." },
+      { category: "보안", question: "AI에 입력한 내용을 삭제하면 보안상 문제가 없나요?", answer_seed: "삭제 여부만으로 판단하지 않고 서비스의 데이터 저장 및 처리 정책과 조직의 보안 기준을 확인합니다." },
+      { category: "보안", question: "AI 사용 중 보안이 의심되는 상황이 발생하면 어떻게 해야 하나요?", answer_seed: "추가 입력이나 공유를 중단하고 조직에서 정한 보안 사고 신고 및 대응 절차에 따라 확인합니다." }
+    ];
+
+    const numberedFaqData = faqData.map((item, index) => ({ ...item, number: index + 1 }));
+
+    const searchInput = document.getElementById("searchInput");
+    const categoryButtons = document.getElementById("categoryButtons");
+    const faqList = document.getElementById("faqList");
+    const resultCount = document.getElementById("resultCount");
+    const showAllButton = document.getElementById("showAllButton");
+
+    let selectedCategory = "전체";
+
+    function escapeHtml(text) {
+      return text.replace(/[&<>'"]/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "'": "&#39;",
+        '"': "&quot;"
+      }[char]));
+    }
+
+    function escapeRegExp(text) {
+      return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
+    function highlight(text, keyword) {
+      const safeText = escapeHtml(text);
+      const trimmed = keyword.trim();
+      if (!trimmed) return safeText;
+      const regex = new RegExp(`(${escapeRegExp(trimmed)})`, "gi");
+      return safeText.replace(regex, "<mark>$1</mark>");
+    }
+
+    function getFilteredData() {
+      const keyword = searchInput.value.trim().toLowerCase();
+
+      return numberedFaqData.filter(item => {
+        const matchesCategory = selectedCategory === "전체" || item.category === selectedCategory;
+        const searchableText = `${item.question} ${item.answer_seed}`.toLowerCase();
+        const matchesKeyword = !keyword || searchableText.includes(keyword);
+        return matchesCategory && matchesKeyword;
+      });
+    }
+
+    function render() {
+      const keyword = searchInput.value.trim();
+      const filtered = getFilteredData();
+
+      resultCount.textContent = `총 ${filtered.length}건`;
+
+      if (filtered.length === 0) {
+        faqList.innerHTML = `
+          <div class="empty">
+            등록된 FAQ에서 답변을 찾을 수 없습니다.<br /><br />
+            관련 담당부서 또는 공식 안내자료를 확인해 주세요.
+          </div>
+        `;
+        return;
+      }
+
+      faqList.innerHTML = filtered.map(item => `
+        <article class="faq-card category-${escapeHtml(item.category)}">
+          <div class="faq-top">
+            <div class="question-wrap">
+              <span class="faq-number">${String(item.number).padStart(2, "0")}</span>
+              <h3 class="question">${highlight(item.question, keyword)}</h3>
+            </div>
+            <span class="category-badge category-${escapeHtml(item.category)}">${escapeHtml(item.category)}</span>
+          </div>
+          <p class="answer">${highlight(item.answer_seed, keyword)}</p>
+        </article>
+      `).join("");
+    }
+
+    searchInput.addEventListener("input", render);
+
+    categoryButtons.addEventListener("click", event => {
+      const button = event.target.closest("button[data-category]");
+      if (!button) return;
+
+      selectedCategory = button.dataset.category;
+      document.querySelectorAll(".category-button").forEach(btn => btn.classList.remove("active"));
+      button.classList.add("active");
+      render();
+    });
+
+    showAllButton.addEventListener("click", () => {
+      searchInput.value = "";
+      selectedCategory = "전체";
+      document.querySelectorAll(".category-button").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.category === "전체");
+      });
+      render();
+      searchInput.focus();
+    });
+
+    render();
+  </script>
+</body>
+</html>
